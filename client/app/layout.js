@@ -1,6 +1,7 @@
 import "./globals.css";
 import SiteHeader from "./components/SiteHeader";
 import SiteFooter from "./components/SiteFooter";
+import BottomNav from "./components/BottomNav";
 import { LanguageProvider } from "./components/LanguageProvider";
 
 export const metadata = {
@@ -17,6 +18,7 @@ export default function RootLayout({ children }) {
           <SiteHeader />
           <main className="site-main">{children}</main>
           <SiteFooter />
+          <BottomNav />
         </LanguageProvider>
       </body>
     </html>

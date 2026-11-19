@@ -15,7 +15,7 @@ const services = [
 ];
 
 const quickFacts = [
-  { icon: "users", value: "१९", englishValue: "19", label: "वडा कार्यालय" },
+  { icon: "users", value: "२०", englishValue: "20", label: "वडा कार्यालय" },
   { icon: "building", value: "२४/७", englishValue: "24/7", label: "नागरिक सेवा" },
   { icon: "heart", value: "समर्पित", englishValue: "Dedicated", label: "जनताको सेवामा" },
 ];
