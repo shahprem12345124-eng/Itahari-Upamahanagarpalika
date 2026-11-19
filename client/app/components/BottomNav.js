@@ -12,7 +12,7 @@ export default function BottomNav() {
 
   const items = [
     { href: "/", label: "गृह", icon: "home" },
-    { href: "/news", label: "पेपर-कानुन", icon: "news" },
+    { href: "/tourist-places", label: "पर्यटन स्थल", icon: "building" },
     { href: "/complaint", label: "गुनासो", emblem: true },
     { href: "/news", label: "सूचना", icon: "bell" },
     { href: "/admin", label: "प्रोफाइल", icon: "user" },

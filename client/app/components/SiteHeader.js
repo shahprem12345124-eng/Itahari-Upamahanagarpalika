@@ -24,6 +24,7 @@ function getThemeSnapshot() {
 const links = [
   { href: "/", label: "गृहपृष्ठ", icon: "home" },
   { href: "/news", label: "समाचार", icon: "news" },
+  { href: "/tourist-places", label: "पर्यटन स्थल", icon: "building" },
   { href: "/complaint", label: "गुनासो दर्ता", icon: "form" },
   { href: "/about", label: "हाम्रो बारेमा", icon: "info" },
 ];

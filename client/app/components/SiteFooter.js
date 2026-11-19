@@ -15,6 +15,7 @@ export default function SiteFooter() {
         </div>
         <div className="footer-links">
           <Link href="/news">{t("सूचना तथा समाचार")}</Link>
+          <Link href="/tourist-places">{t("पर्यटन स्थल")}</Link>
           <Link href="/complaint">{t("गुनासो दर्ता")}</Link>
           <Link href="/about">{t("हाम्रो बारेमा")}</Link>
         </div>

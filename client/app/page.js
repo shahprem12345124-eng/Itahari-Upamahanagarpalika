@@ -65,15 +65,15 @@ export default function Home() {
             {quickFacts.map((fact) => <div className="fact" key={fact.label}><span className="fact-icon"><Icon name={fact.icon} size={16} /></span><span><strong>{language === "en" ? fact.englishValue : fact.value}</strong><small>{t(fact.label)}</small></span></div>)}
           </div>
         </div>
-        <div className="home-art" aria-hidden="true">
-          <div className="art-sun" />
-          <div className="art-hill art-hill-back" />
-          <div className="art-hill art-hill-front" />
-          <div className="art-building art-building-one"><i /><i /><i /><i /></div>
-          <div className="art-building art-building-two"><i /><i /><i /></div>
-          <div className="art-building art-building-three"><i /><i /><i /><i /><i /><i /></div>
-          <div className="art-road" />
-          <div className="art-caption"><span className="live-dot" /> {t("इटहरी — हाम्रो घर")}</div>
+        <div className="home-art">
+          <Image
+            src="/itahari-city.png"
+            alt={t("इटहरी शहरको हवाई दृश्य")}
+            fill
+            priority
+            sizes="(max-width: 680px) 100vw, 50vw"
+            className="home-art-image"
+          />
         </div>
       </section>
 
