@@ -22,6 +22,33 @@ router.get("/:id", requireAdmin, async (request, response) => {
 });
 
 router.post("/", upload.single("image"), async (request, response) => {
+  const locationFields = ["latitude", "longitude", "accuracy"];
+  const hasLocation = locationFields.some((field) => Object.prototype.hasOwnProperty.call(request.body, field));
+  let location;
+  if (hasLocation) {
+    const { latitude: latitudeValue, longitude: longitudeValue, accuracy: accuracyValue } = request.body;
+    const latitude = Number(latitudeValue);
+    const longitude = Number(longitudeValue);
+    const accuracy = accuracyValue === undefined || accuracyValue === "" ? undefined : Number(accuracyValue);
+    if (
+      typeof latitudeValue !== "string"
+      || latitudeValue.trim() === ""
+      || typeof longitudeValue !== "string"
+      || longitudeValue.trim() === ""
+      || !Number.isFinite(latitude)
+      || latitude < -90
+      || latitude > 90
+      || !Number.isFinite(longitude)
+      || longitude < -180
+      || longitude > 180
+      || (accuracy !== undefined && (!Number.isFinite(accuracy) || accuracy < 0))
+    ) {
+      await removeUploadedImage(uploadedImagePath(request.file));
+      return response.status(400).json({ message: "स्थान विवरण मान्य छैन।" });
+    }
+    location = { latitude, longitude, ...(accuracy !== undefined ? { accuracy } : {}) };
+  }
+
   const data = new Complaint({
     fullName: request.body.fullName,
     phone: request.body.phone,
@@ -29,6 +56,7 @@ router.post("/", upload.single("image"), async (request, response) => {
     department: request.body.department,
     details: request.body.details,
     image: uploadedImagePath(request.file),
+    ...(location ? { location } : {}),
   });
   try {
     await data.save();

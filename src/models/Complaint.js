@@ -1,5 +1,14 @@
 const mongoose = require("mongoose");
 
+const complaintLocationSchema = new mongoose.Schema(
+  {
+    latitude: { type: Number, required: true, min: -90, max: 90 },
+    longitude: { type: Number, required: true, min: -180, max: 180 },
+    accuracy: { type: Number, min: 0 },
+  },
+  { _id: false },
+);
+
 const complaintSchema = new mongoose.Schema(
   {
     fullName: { type: String, required: true, trim: true, maxlength: 100 },
@@ -8,6 +17,7 @@ const complaintSchema = new mongoose.Schema(
     department: { type: String, required: true, trim: true, maxlength: 100 },
     details: { type: String, required: true, trim: true, minlength: 10, maxlength: 3000 },
     image: { type: String, default: "" },
+    location: { type: complaintLocationSchema, default: undefined },
   },
   { timestamps: true },
 );
