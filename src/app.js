@@ -7,6 +7,7 @@ const complaintRoutes = require("./routes/complaints");
 const newsRoutes = require("./routes/news");
 const settingsRoutes = require("./routes/settings");
 const touristPlaceRoutes = require("./routes/touristPlaces");
+const uploadRoutes = require("./routes/uploads");
 
 const app = express();
 const allowedOrigins = (process.env.CLIENT_ORIGIN || "http://localhost:3000")
@@ -30,6 +31,7 @@ app.use("/uploads", express.static(uploadsDirectory));
 app.get("/api/health", (_request, response) => {
   response.json({ ok: true, database: mongoose.connection.readyState === 1 ? "connected" : "disconnected" });
 });
+app.use("/api/uploads", uploadRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/news", newsRoutes);
 app.use("/api/complaints", complaintRoutes);
