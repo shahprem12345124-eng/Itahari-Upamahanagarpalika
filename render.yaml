@@ -17,7 +17,5 @@ services:
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
-      - key: ADMIN_PASSWORD_CHANGE_SECRET
-        sync: false
       - key: CLIENT_ORIGIN
         sync: false
