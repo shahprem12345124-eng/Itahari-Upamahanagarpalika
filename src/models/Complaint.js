@@ -17,6 +17,11 @@ const complaintSchema = new mongoose.Schema(
     department: { type: String, required: true, trim: true, maxlength: 100 },
     details: { type: String, required: true, trim: true, minlength: 10, maxlength: 3000 },
     image: { type: String, default: "" },
+    status: {
+      type: String,
+      enum: ["pending", "completed", "cancelled"],
+      default: "pending",
+    },
     location: { type: complaintLocationSchema, default: undefined },
   },
   { timestamps: true },

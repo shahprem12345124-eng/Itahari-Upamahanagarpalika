@@ -3,7 +3,9 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const multer = require("multer");
 
-const uploadsDirectory = path.resolve(__dirname, "../../uploads");
+const uploadsDirectory = path.resolve(
+  process.env.UPLOADS_DIR || path.resolve(__dirname, "../../uploads"),
+);
 fs.mkdirSync(uploadsDirectory, { recursive: true });
 
 const storage = multer.diskStorage({

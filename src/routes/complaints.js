@@ -12,6 +12,15 @@ router.get("/", requireAdmin, async (_request, response) => {
   response.json({ data });
 });
 
+router.get("/track/:id", async (request, response) => {
+  if (!mongoose.isValidObjectId(request.params.id)) {
+    return response.status(400).json({ message: "गुनासो सन्दर्भ नम्बर मान्य छैन।" });
+  }
+  const complaint = await Complaint.findById(request.params.id).select("status createdAt").lean();
+  if (!complaint) return response.status(404).json({ message: "यस सन्दर्भ नम्बरको गुनासो भेटिएन।" });
+  response.json({ data: { id: complaint._id, status: complaint.status || "pending", createdAt: complaint.createdAt } });
+});
+
 router.get("/:id", requireAdmin, async (request, response) => {
   if (!mongoose.isValidObjectId(request.params.id)) {
     return response.status(400).json({ message: "गुनासो पहिचान मान्य छैन।" });
@@ -65,6 +74,23 @@ router.post("/", upload.single("image"), async (request, response) => {
     throw error;
   }
   response.status(201).json({ data });
+});
+
+router.patch("/:id/status", requireAdmin, async (request, response) => {
+  if (!mongoose.isValidObjectId(request.params.id)) {
+    return response.status(400).json({ message: "गुनासो पहिचान मान्य छैन।" });
+  }
+  const { status } = request.body || {};
+  if (!["pending", "completed", "cancelled"].includes(status)) {
+    return response.status(400).json({ message: "गुनासोको अवस्था मान्य छैन।" });
+  }
+  const complaint = await Complaint.findByIdAndUpdate(
+    request.params.id,
+    { $set: { status } },
+    { new: true, runValidators: true },
+  );
+  if (!complaint) return response.status(404).json({ message: "गुनासो भेटिएन।" });
+  response.json({ data: complaint });
 });
 
 router.delete("/:id", requireAdmin, async (request, response) => {
