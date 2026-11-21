@@ -7,6 +7,12 @@ import { apiRequest, imageUrl } from "../../lib/api";
 import { useLanguage } from "../components/LanguageProvider";
 
 const emptyNews = { title: "", titleEn: "", category: "सूचना", summary: "", summaryEn: "", content: "", contentEn: "" };
+const emptyTouristPlace = { name: "", nameEn: "", description: "", descriptionEn: "", address: "", addressEn: "" };
+const complaintStatuses = {
+  pending: "विचाराधीन",
+  completed: "सम्पन्न",
+  cancelled: "रद्द",
+};
 const emptyMayorProfile = {
   mayorName: "",
   mayorTitle: "",
@@ -41,12 +47,17 @@ export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [activeTab, setActiveTab] = useState("news");
   const [news, setNews] = useState([]);
+  const [touristPlaces, setTouristPlaces] = useState([]);
   const [complaints, setComplaints] = useState([]);
+  const [complaintFilter, setComplaintFilter] = useState("all");
   const [loading, setLoading] = useState(false);
   const [pageError, setPageError] = useState("");
   const [pageMessage, setPageMessage] = useState("");
   const [newsEditor, setNewsEditor] = useState(null);
+  const [touristPlaceEditor, setTouristPlaceEditor] = useState(null);
   const [complaintDetails, setComplaintDetails] = useState(null);
+  const [savingComplaintStatus, setSavingComplaintStatus] = useState("");
+  const [savingTouristPlace, setSavingTouristPlace] = useState(false);
   const [mayorImage, setMayorImage] = useState("");
   const [savingMayor, setSavingMayor] = useState(false);
   const [mayorProfile, setMayorProfile] = useState(emptyMayorProfile);
@@ -56,12 +67,14 @@ export default function AdminPage() {
     setLoading(true);
     setPageError("");
     try {
-      const [newsResponse, complaintsResponse, settingsResponse] = await Promise.all([
+      const [newsResponse, complaintsResponse, settingsResponse, touristPlacesResponse] = await Promise.all([
         apiRequest("/news"),
         adminApiRequest("/complaints"),
         apiRequest("/settings"),
+        apiRequest("/tourist-places"),
       ]);
       setNews(newsResponse.data || []);
+      setTouristPlaces(touristPlacesResponse.data || []);
       setComplaints(complaintsResponse.data || []);
       setMayorImage(settingsResponse.data?.mayorImage || "");
       setMayorProfile(Object.fromEntries(
@@ -148,6 +161,64 @@ export default function AdminPage() {
     }
   }
 
+  async function updateComplaintStatus(item, status) {
+    setSavingComplaintStatus(item._id);
+    setPageError("");
+    try {
+      const response = await adminApiRequest(`/complaints/${item._id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      setComplaints((items) => items.map((complaint) => (
+        complaint._id === item._id ? response.data : complaint
+      )));
+      setComplaintDetails((current) => (
+        current?._id === item._id ? response.data : current
+      ));
+      setPageMessage(t("गुनासोको अवस्था अद्यावधिक भयो।"));
+    } catch (error) {
+      setPageError(t(error.message));
+    } finally {
+      setSavingComplaintStatus("");
+    }
+  }
+
+  async function saveTouristPlace(event) {
+    event.preventDefault();
+    const body = new FormData(event.currentTarget);
+    const id = body.get("id");
+    body.delete("id");
+    setSavingTouristPlace(true);
+    setPageError("");
+    try {
+      await adminApiRequest(id ? `/tourist-places/${id}` : "/tourist-places", {
+        method: id ? "PUT" : "POST",
+        body,
+      });
+      setTouristPlaceEditor(null);
+      setPageMessage(t(id ? "पर्यटन स्थल अद्यावधिक भयो।" : "नयाँ पर्यटन स्थल थपियो।"));
+      await loadData();
+    } catch (error) {
+      setPageError(t(error.message));
+    } finally {
+      setSavingTouristPlace(false);
+    }
+  }
+
+  async function deleteTouristPlace(item) {
+    const title = language === "en" ? item.nameEn || item.name : item.name;
+    if (!window.confirm(language === "en" ? `Delete "${title}"?` : `"${title}" हटाउने हो?`)) return;
+    setPageError("");
+    try {
+      await adminApiRequest(`/tourist-places/${item._id}`, { method: "DELETE" });
+      setPageMessage(t("पर्यटन स्थल हटाइयो।"));
+      await loadData();
+    } catch (error) {
+      setPageError(t(error.message));
+    }
+  }
+
   async function showComplaint(item) {
     setPageError("");
     try {
@@ -202,6 +273,15 @@ export default function AdminPage() {
     setMayorProfile((profile) => ({ ...profile, [field]: value }));
   }
 
+  const complaintStatusCounts = complaints.reduce((counts, complaint) => {
+    const status = complaint.status || "pending";
+    counts[status] = (counts[status] || 0) + 1;
+    return counts;
+  }, { pending: 0, completed: 0, cancelled: 0 });
+  const filteredComplaints = complaintFilter === "all"
+    ? complaints
+    : complaints.filter((complaint) => (complaint.status || "pending") === complaintFilter);
+
   if (!unlocked) {
     return (
       <div className="container admin-gate-wrap">
@@ -234,6 +314,21 @@ export default function AdminPage() {
         <div className="admin-stat-card"><span className="admin-stat-icon green"><Icon name="check" size={19} /></span><span><strong>{t("सक्रिय")}</strong><small>{t("नागरिक सेवा पोर्टल")}</small></span></div>
       </div>
 
+      <div className="complaint-stat-grid" aria-label={t("गुनासोको अवस्था सारांश")}>
+        <button type="button" className={`complaint-stat-card ${complaintFilter === "all" ? "selected" : ""}`} onClick={() => { setComplaintFilter("all"); setActiveTab("complaints"); }}>
+          <span className="admin-stat-icon blue"><Icon name="form" size={18} /></span><span><strong>{complaints.length}</strong><small>{t("सबै गुनासो")}</small></span>
+        </button>
+        <button type="button" className={`complaint-stat-card ${complaintFilter === "pending" ? "selected" : ""}`} onClick={() => { setComplaintFilter("pending"); setActiveTab("complaints"); }}>
+          <span className="admin-stat-icon amber"><Icon name="clock" size={18} /></span><span><strong>{complaintStatusCounts.pending}</strong><small>{t("विचाराधीन")}</small></span>
+        </button>
+        <button type="button" className={`complaint-stat-card ${complaintFilter === "completed" ? "selected" : ""}`} onClick={() => { setComplaintFilter("completed"); setActiveTab("complaints"); }}>
+          <span className="admin-stat-icon green"><Icon name="check" size={18} /></span><span><strong>{complaintStatusCounts.completed}</strong><small>{t("सम्पन्न")}</small></span>
+        </button>
+        <button type="button" className={`complaint-stat-card ${complaintFilter === "cancelled" ? "selected" : ""}`} onClick={() => { setComplaintFilter("cancelled"); setActiveTab("complaints"); }}>
+          <span className="admin-stat-icon red"><Icon name="close" size={18} /></span><span><strong>{complaintStatusCounts.cancelled}</strong><small>{t("रद्द")}</small></span>
+        </button>
+      </div>
+
       {pageError && <div className="form-alert error admin-alert" role="alert"><Icon name="info" size={17} /> {pageError}<button type="button" onClick={() => setPageError("")} aria-label={t("सन्देश बन्द गर्नुहोस्")}><Icon name="close" size={15} /></button></div>}
       {pageMessage && <div className="form-alert success admin-alert" role="status"><Icon name="check" size={17} /> {pageMessage}<button type="button" onClick={() => setPageMessage("")} aria-label={t("सन्देश बन्द गर्नुहोस्")}><Icon name="close" size={15} /></button></div>}
 
@@ -241,6 +336,7 @@ export default function AdminPage() {
         <div className="admin-tabs" role="tablist">
           <button type="button" role="tab" aria-selected={activeTab === "news"} className={activeTab === "news" ? "selected" : ""} onClick={() => setActiveTab("news")}><Icon name="news" size={17} /> {t("समाचार व्यवस्थापन")}</button>
           <button type="button" role="tab" aria-selected={activeTab === "complaints"} className={activeTab === "complaints" ? "selected" : ""} onClick={() => setActiveTab("complaints")}><Icon name="form" size={17} /> {t("नागरिक गुनासो")} <span className="tab-count">{complaints.length}</span></button>
+          <button type="button" role="tab" aria-selected={activeTab === "places"} className={activeTab === "places" ? "selected" : ""} onClick={() => setActiveTab("places")}><Icon name="building" size={17} /> {t("पर्यटन स्थल")}</button>
           <button type="button" role="tab" aria-selected={activeTab === "settings"} className={activeTab === "settings" ? "selected" : ""} onClick={() => setActiveTab("settings")}><Icon name="edit" size={17} /> {t("पोर्टल सेटिङ")}</button>
         </div>
 
@@ -251,7 +347,22 @@ export default function AdminPage() {
 
         {activeTab === "complaints" && <section className="admin-tab-content">
           <div className="admin-section-heading"><div><h2>{t("नागरिकका गुनासो")}</h2><p>{t("दर्ता भएका समस्या र संलग्न तस्बिरहरू हेर्नुहोस्।")}</p></div><button type="button" className="button button-secondary" onClick={loadData}><Icon name="clock" size={16} /> {t("नवीकरण")}</button></div>
-          {loading && !complaints.length ? <div className="admin-empty">{t("गुनासो लोड हुँदैछ...")}</div> : complaints.length ? <div className="complaint-table-wrap"><table className="complaint-table"><thead><tr><th>{t("नागरिक")}</th><th>{t("वडा / विषय")}</th><th>{t("दर्ता मिति")}</th><th>{t("तस्बिर")}</th><th>{t("कार्य")}</th></tr></thead><tbody>{complaints.map((item) => <tr key={item._id}><td><strong>{item.fullName}</strong><small>{item.phone}</small></td><td><strong>{item.ward}</strong><small>{t(item.department)}</small></td><td>{item.createdAt ? new Date(item.createdAt).toLocaleDateString(language === "en" ? "en-US" : "ne-NP") : "—"}</td><td>{item.image ? <span className="has-image"><Icon name="image" size={15} /> {t("संलग्न")}</span> : <span className="no-image">{t("छैन")}</span>}</td><td><div className="admin-row-actions"><button type="button" className="icon-button action-view" aria-label={t("गुनासो हेर्नुहोस्")} onClick={() => showComplaint(item)}><Icon name="eye" size={17} /></button><button type="button" className="icon-button action-delete" aria-label={t("गुनासो हटाउनुहोस्")} onClick={() => deleteComplaint(item)}><Icon name="trash" size={17} /></button></div></td></tr>)}</tbody></table></div> : <div className="admin-empty"><Icon name="form" size={22} /> {t("हालसम्म कुनै गुनासो प्राप्त भएको छैन।")}</div>}
+          <div className="complaint-filter-bar" role="group" aria-label={t("गुनासो फिल्टर गर्नुहोस्")}>
+            {[["all", "सबै"], ["pending", "विचाराधीन"], ["completed", "सम्पन्न"], ["cancelled", "रद्द"]].map(([value, label]) => (
+              <button type="button" key={value} className={complaintFilter === value ? "selected" : ""} onClick={() => setComplaintFilter(value)}>
+                {t(label)} <span>{value === "all" ? complaints.length : complaintStatusCounts[value]}</span>
+              </button>
+            ))}
+          </div>
+          {loading && !complaints.length ? <div className="admin-empty">{t("गुनासो लोड हुँदैछ...")}</div> : filteredComplaints.length ? <div className="complaint-table-wrap"><table className="complaint-table"><thead><tr><th>{t("नागरिक")}</th><th>{t("वडा / विषय")}</th><th>{t("दर्ता मिति")}</th><th>{t("अवस्था")}</th><th>{t("स्थान")}</th><th>{t("तस्बिर")}</th><th>{t("कार्य")}</th></tr></thead><tbody>{filteredComplaints.map((item) => {
+            const status = item.status || "pending";
+            return <tr key={item._id}><td><strong>{item.fullName}</strong><small>{item.phone}</small></td><td><strong>{item.ward}</strong><small>{t(item.department)}</small></td><td>{item.createdAt ? new Date(item.createdAt).toLocaleDateString(language === "en" ? "en-US" : "ne-NP") : "—"}</td><td><span className={`complaint-status ${status}`}>{t(complaintStatuses[status] || complaintStatuses.pending)}</span></td><td>{hasComplaintLocation(item.location) ? <a className="complaint-map-link" href={complaintMapUrl(item.location)} target="_blank" rel="noopener noreferrer" aria-label={`${t("नक्सामा स्थान खोल्नुहोस्")}: ${item.fullName}`}><Icon name="mapPin" size={14} /> {t("नक्सा")}</a> : <span className="no-image">—</span>}</td><td>{item.image ? <span className="has-image"><Icon name="image" size={15} /> {t("संलग्न")}</span> : <span className="no-image">{t("छैन")}</span>}</td><td><div className="admin-row-actions"><button type="button" className="icon-button action-view" aria-label={t("गुनासो हेर्नुहोस्")} onClick={() => showComplaint(item)}><Icon name="eye" size={17} /></button><button type="button" className="icon-button action-delete" aria-label={t("गुनासो हटाउनुहोस्")} onClick={() => deleteComplaint(item)}><Icon name="trash" size={17} /></button></div></td></tr>;
+          })}</tbody></table></div> : <div className="admin-empty"><Icon name="form" size={22} /> {t("यस अवस्थामा कुनै गुनासो भेटिएन।")}</div>}
+        </section>}
+
+        {activeTab === "places" && <section className="admin-tab-content">
+          <div className="admin-section-heading"><div><h2>{t("पर्यटन स्थल व्यवस्थापन")}</h2><p>{t("पर्यटन स्थल थप्नुहोस्, विवरण अद्यावधिक गर्नुहोस् वा हटाउनुहोस्।")}</p></div><button type="button" className="button button-primary" onClick={() => setTouristPlaceEditor({ ...emptyTouristPlace })}><span>＋</span> {t("नयाँ पर्यटन स्थल")}</button></div>
+          {loading && !touristPlaces.length ? <div className="admin-empty">{t("पर्यटन स्थलहरू लोड हुँदैछन्...")}</div> : touristPlaces.length ? <div className="admin-news-list">{touristPlaces.map((item) => <article className="admin-news-row" key={item._id}><span className="admin-news-icon"><Icon name="building" size={18} /></span><div className="admin-news-copy"><strong>{language === "en" ? item.nameEn || item.name : item.name}</strong><small>{language === "en" ? item.addressEn || item.address || item.descriptionEn || item.description : item.address || item.description}</small></div><div className="admin-row-actions"><button type="button" className="icon-button action-edit" aria-label={t("सम्पादन")} onClick={() => setTouristPlaceEditor({ ...item })}><Icon name="edit" size={17} /></button><button type="button" className="icon-button action-delete" aria-label={t("हटाउनुहोस्")} onClick={() => deleteTouristPlace(item)}><Icon name="trash" size={17} /></button></div></article>)}</div> : <div className="admin-empty"><Icon name="building" size={22} /> {t("अहिलेसम्म कुनै व्यवस्थापित पर्यटन स्थल छैन।")}</div>}
         </section>}
 
         {activeTab === "settings" && <section className="admin-tab-content">
@@ -296,11 +407,30 @@ export default function AdminPage() {
         </section>
       </div>}
 
+      {touristPlaceEditor && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setTouristPlaceEditor(null); }}>
+        <section className="dialog-card" role="dialog" aria-modal="true" aria-labelledby="tourist-place-editor-title">
+          <div className="dialog-heading"><div><span className="eyebrow">{t("सामग्री व्यवस्थापन")}</span><h2 id="tourist-place-editor-title">{touristPlaceEditor._id ? t("पर्यटन स्थल सम्पादन") : t("नयाँ पर्यटन स्थल")}</h2></div><button type="button" className="icon-button" onClick={() => setTouristPlaceEditor(null)} aria-label={t("बन्द गर्नुहोस्")}><Icon name="close" /></button></div>
+          <form className="admin-news-form" onSubmit={saveTouristPlace}>
+            {touristPlaceEditor._id && <input type="hidden" name="id" value={touristPlaceEditor._id} />}
+            <label className="field"><span>{t("नाम")} <b>*</b></span><input name="name" defaultValue={touristPlaceEditor.name} required maxLength={180} /></label>
+            <label className="field"><span>{t("English name")}</span><input name="nameEn" defaultValue={touristPlaceEditor.nameEn} maxLength={180} /></label>
+            <label className="field"><span>{t("विवरण")} <b>*</b></span><textarea name="description" defaultValue={touristPlaceEditor.description} rows={4} required maxLength={4000} /></label>
+            <label className="field"><span>{t("English description")}</span><textarea name="descriptionEn" defaultValue={touristPlaceEditor.descriptionEn} rows={4} maxLength={4000} /></label>
+            <label className="field"><span>{t("ठेगाना / स्थान")}</span><input name="address" defaultValue={touristPlaceEditor.address} maxLength={300} /></label>
+            <label className="field"><span>{t("Address in English")}</span><input name="addressEn" defaultValue={touristPlaceEditor.addressEn} maxLength={300} /></label>
+            <label className="field"><span>{t("पर्यटन स्थलको तस्बिर")}</span><input type="file" name="image" accept="image/png,image/jpeg,image/webp" /></label>
+            {touristPlaceEditor.image && <p className="current-image-note"><Icon name="image" size={15} /> {t("हालको तस्बिर छ; नयाँ छानेमा प्रतिस्थापन हुनेछ।")}</p>}
+            <div className="dialog-actions"><button type="button" className="button button-secondary" onClick={() => setTouristPlaceEditor(null)}>{t("रद्द गर्नुहोस्")}</button><button type="submit" className="button button-primary" disabled={savingTouristPlace}><Icon name="check" size={16} /> {savingTouristPlace ? t("सुरक्षित गर्दै...") : t("सुरक्षित गर्नुहोस्")}</button></div>
+          </form>
+        </section>
+      </div>}
+
       {complaintDetails && <div className="modal-backdrop complaint-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setComplaintDetails(null); }}>
         <section className="dialog-card complaint-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="complaint-dialog-title">
           <div className="dialog-heading"><div><span className="eyebrow">{t("नागरिक गुनासो")}</span><h2 id="complaint-dialog-title">{t("गुनासोको विवरण")}</h2></div><button type="button" className="icon-button" onClick={() => setComplaintDetails(null)} aria-label={t("बन्द गर्नुहोस्")}><Icon name="close" /></button></div>
           <div className="complaint-detail-content">
-            <div className="complaint-detail-meta"><div><small>{t("नागरिक")}</small><strong>{complaintDetails.fullName}</strong></div><div><small>{t("सम्पर्क नम्बर")}</small><a href={`tel:${complaintDetails.phone}`}>{complaintDetails.phone}</a></div><div><small>{t("वडा")}</small><strong>{complaintDetails.ward}</strong></div><div><small>{t("सम्बन्धित शाखा")}</small><strong>{t(complaintDetails.department)}</strong></div><div><small>{t("दर्ता मिति")}</small><strong>{new Date(complaintDetails.createdAt).toLocaleString(language === "en" ? "en-US" : "ne-NP")}</strong></div></div>
+            <label className="complaint-status-editor"><span>{t("गुनासोको अवस्था")}</span><select value={complaintDetails.status || "pending"} onChange={(event) => updateComplaintStatus(complaintDetails, event.target.value)} disabled={savingComplaintStatus === complaintDetails._id}><option value="pending">{t(complaintStatuses.pending)}</option><option value="completed">{t(complaintStatuses.completed)}</option><option value="cancelled">{t(complaintStatuses.cancelled)}</option></select></label>
+            <div className="complaint-detail-meta"><div><small>{t("नागरिक")}</small><strong>{complaintDetails.fullName}</strong></div><div><small>{t("सम्पर्क नम्बर")}</small><a href={`tel:${complaintDetails.phone}`}>{complaintDetails.phone}</a></div><div><small>{t("वडा")}</small><strong>{complaintDetails.ward}</strong></div><div><small>{t("सम्बन्धित शाखा")}</small><strong>{t(complaintDetails.department)}</strong></div><div><small>{t("दर्ता मिति")}</small><strong>{new Date(complaintDetails.createdAt).toLocaleString(language === "en" ? "en-US" : "ne-NP")}</strong></div><div><small>{t("गुनासोको स्थान")}</small>{hasComplaintLocation(complaintDetails.location) ? <><a className="complaint-detail-map-link" href={complaintMapUrl(complaintDetails.location)} target="_blank" rel="noopener noreferrer"><Icon name="mapPin" size={14} /> {t("नक्सामा हेर्नुहोस्")}</a><small className="complaint-location-coordinates">{complaintDetails.location.latitude.toFixed(5)}, {complaintDetails.location.longitude.toFixed(5)}{Number.isFinite(complaintDetails.location.accuracy) ? ` · ±${Math.round(complaintDetails.location.accuracy)} m` : ""}</small></> : <strong>{t("स्थान प्रदान गरिएको छैन")}</strong>}</div></div>
             <div className="complaint-detail-description"><small>{t("समस्या / सुझावको विवरण")}</small><p>{complaintDetails.details}</p></div>
             <div className="complaint-detail-image">{complaintDetails.image ? <a href={imageUrl(complaintDetails.image)} target="_blank" rel="noreferrer"><Image src={imageUrl(complaintDetails.image)} alt={language === "en" ? `Image attached by ${complaintDetails.fullName}` : `${complaintDetails.fullName} द्वारा संलग्न तस्बिर`} width={1600} height={1000} unoptimized /><span><Icon name="eye" size={15} /> {t("पूरा तस्बिर नयाँ ट्याबमा हेर्नुहोस्")}</span></a> : <div className="no-attachment"><Icon name="image" size={23} /> {t("यो गुनासोसँग तस्बिर संलग्न छैन।")}</div>}</div>
           </div>
@@ -309,4 +439,13 @@ export default function AdminPage() {
       </div>}
     </div>
   );
+}
+
+function hasComplaintLocation(location) {
+  return Number.isFinite(location?.latitude) && Number.isFinite(location?.longitude);
+}
+
+function complaintMapUrl(location) {
+  const coordinates = encodeURIComponent(`${location.latitude},${location.longitude}`);
+  return `https://www.google.com/maps/search/?api=1&query=${coordinates}`;
 }

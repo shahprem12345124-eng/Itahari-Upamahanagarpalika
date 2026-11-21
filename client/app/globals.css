@@ -291,6 +291,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .field input::placeholder, .field textarea::placeholder { color: var(--faint); }
 .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(36,74,145,.1); }
 .full-width { grid-column: 1 / -1; }
+.location-field { padding: 14px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-soft); }
+.location-field > p { margin: 0; color: var(--muted); font-size: 10px; font-weight: 500; line-height: 1.7; }
+.location-control-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.location-control-row .button { min-height: 39px; font-size: 11px; }
+.location-coordinates { display: flex; align-items: center; gap: 5px; color: var(--green) !important; }
+.location-status.error { color: var(--red-dark); }
+.location-status.success { color: var(--green); }
 .upload-field { min-height: 88px; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px dashed var(--line-strong); border-radius: 11px; background: var(--surface-soft); cursor: pointer; }
 .upload-field > input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .upload-empty { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--blue); }
@@ -344,12 +351,31 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .tourist-place-card { min-width: 0; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-radius: 15px; background: var(--surface); box-shadow: var(--shadow-small); }
 .tourist-place-image-frame { height: 190px; position: relative; overflow: hidden; background: var(--surface-soft); }
 .tourist-place-image { object-fit: cover; }
+.tourist-place-image-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--faint); }
 .tourist-place-number { position: absolute; top: 12px; left: 12px; width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; border: 2px solid rgba(255,255,255,.85); border-radius: 12px; background: var(--red); color: #fff; font-size: 11px; font-weight: 850; box-shadow: 0 3px 12px rgba(0,0,0,.18); }
 .tourist-place-copy { flex: 1; display: flex; flex-direction: column; align-items: flex-start; padding: 18px; }
 .tourist-place-card h2 { margin: 0; font-size: 15px; line-height: 1.65; }
 .tourist-place-card p { margin: 9px 0 0; color: var(--muted); font-size: 11px; line-height: 1.9; }
 .tourist-place-map { min-height: 39px; display: inline-flex; align-items: center; gap: 7px; margin-top: 16px; padding: 0 11px; border-radius: 9px; background: var(--red-soft); color: var(--red-dark); font-size: 10px; font-weight: 800; transition: background .16s ease, transform .16s ease; }
 .tourist-place-map:hover { background: var(--red); color: #fff; transform: translateY(-1px); }
+.tourist-place-load-error { margin: 20px 0 0; color: var(--red-dark); font-size: 11px; }
+
+.complaint-track-panel { margin-top: 20px; padding: 20px; }
+.complaint-track-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; margin-top: 16px; }
+.complaint-track-form .field { margin: 0; }
+.complaint-track-form .button { min-height: 43px; }
+.complaint-track-error { margin: 12px 0 0; color: var(--red-dark); font-size: 11px; }
+.complaint-track-result { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 14px; }
+.complaint-track-result > div { min-width: 150px; display: flex; flex-direction: column; gap: 5px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
+.complaint-track-result small, .complaint-status-editor span { color: var(--muted); font-size: 10px; }
+.complaint-status { width: fit-content; display: inline-flex; padding: 4px 8px; border-radius: 999px; font-size: 10px; font-weight: 800; }
+.complaint-status.pending { background: #fff4d6; color: #8a5a00; }
+.complaint-status.completed { background: #e9f8f2; color: #087352; }
+.complaint-status.cancelled { background: #fff0ef; color: #aa292c; }
+[data-theme="dark"] .complaint-status.pending { background: #44351e; color: #f0c66c; }
+[data-theme="dark"] .complaint-status.completed { background: #1e3936; color: #5ad2a9; }
+[data-theme="dark"] .complaint-status.cancelled { background: #38252d; color: #ff8989; }
+.complaint-reference-id { display: inline-block; margin: 3px 0 0 4px; padding: 3px 7px; border-radius: 6px; background: rgba(8,115,82,.1); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
 
 .admin-container { max-width: 1050px; }
 .admin-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 21px; }
@@ -366,6 +392,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .admin-stat-card > span:last-child { display: flex; flex-direction: column; line-height: 1.5; }
 .admin-stat-card strong { font-size: 17px; }
 .admin-stat-card small { color: var(--muted); font-size: 10px; }
+.complaint-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+.complaint-stat-card { min-height: 72px; display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); text-align: left; cursor: pointer; transition: border .15s ease, box-shadow .15s ease; }
+.complaint-stat-card:hover, .complaint-stat-card.selected { border-color: var(--red); box-shadow: 0 0 0 2px rgba(184, 47, 47, .08); }
+.complaint-stat-card > span:last-child { display: flex; flex-direction: column; line-height: 1.35; }
+.complaint-stat-card strong { font-size: 18px; }
+.complaint-stat-card small { color: var(--muted); font-size: 10px; }
+.admin-stat-icon.amber { background: #fff4d6; color: #8a5a00; }
+[data-theme="dark"] .admin-stat-icon.amber { background: #44351e; color: #f0c66c; }
+[data-theme="dark"] .admin-stat-icon.red { background: #38252d; color: #ff8989; }
 .admin-alert { align-items: center; margin: 0 0 12px; }
 .admin-alert button { display: inline-flex; margin-left: auto; padding: 3px; border: 0; background: transparent; color: inherit; cursor: pointer; }
 .admin-workspace { overflow: hidden; }
@@ -378,6 +413,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .admin-section-heading h2 { margin: 0; font-size: 17px; }
 .admin-section-heading p { margin: 2px 0 0; color: var(--muted); font-size: 10px; }
 .admin-section-heading .button { min-height: 39px; padding-inline: 12px; font-size: 11px; }
+.complaint-filter-bar { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px; }
+.complaint-filter-bar button { min-height: 34px; display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--muted); cursor: pointer; font-size: 10px; font-weight: 750; }
+.complaint-filter-bar button span { min-width: 18px; padding: 1px 5px; border-radius: 999px; background: var(--surface-soft); font-size: 9px; text-align: center; }
+.complaint-filter-bar button.selected { border-color: var(--red); background: var(--red-soft); color: var(--red-dark); }
 .admin-news-list { display: flex; flex-direction: column; }
 .admin-news-row { min-height: 75px; display: flex; align-items: center; gap: 13px; padding: 12px 0; border-top: 1px solid var(--line); }
 .admin-news-icon { width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; flex: 0 0 38px; border-radius: 11px; background: var(--surface-soft); color: var(--blue); }
@@ -403,6 +442,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .complaint-table td > strong { color: var(--ink); font-size: 11px; }
 .complaint-table td > small { margin-top: 2px; color: var(--muted); font-size: 9px; }
 .complaint-table .admin-row-actions { flex-wrap: nowrap; }
+.complaint-map-link, .complaint-detail-map-link { display: inline-flex; align-items: center; gap: 4px; color: var(--blue); font-size: 10px; font-weight: 750; white-space: nowrap; }
+.complaint-map-link:hover, .complaint-detail-map-link:hover { color: var(--red-dark); }
+.complaint-location-coordinates { overflow-wrap: anywhere; }
 .has-image { display: inline-flex; align-items: center; gap: 5px; color: var(--green); white-space: nowrap; }
 .no-image { color: var(--faint); }
 .mayor-settings { display: flex; align-items: center; gap: 20px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-soft); }
@@ -442,6 +484,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .complaint-modal-backdrop { padding: 14px; }
 .complaint-detail-dialog { width: min(880px, 100%); max-height: 95vh; }
 .complaint-detail-content { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding-top: 17px; }
+.complaint-status-editor { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; }
+.complaint-status-editor select { min-height: 36px; padding: 6px 10px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface-soft); color: var(--ink); }
 .complaint-detail-meta { display: grid; grid-template-columns: repeat(2, 1fr); gap: 11px; align-content: start; }
 .complaint-detail-meta > div, .complaint-detail-description { display: flex; flex-direction: column; padding: 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
 .complaint-detail-meta small, .complaint-detail-description small { color: var(--muted); font-size: 9px; }
@@ -631,10 +675,17 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .tourist-place-image-frame { height: 210px; }
   .tourist-place-copy { padding: 16px; }
   .tourist-place-card h2 { font-size: 14px; }
+  .complaint-track-panel { padding: 15px; }
+  .complaint-track-form { grid-template-columns: 1fr; }
+  .complaint-track-form .button { width: 100%; }
   .admin-heading { align-items: flex-start; }
   .admin-heading h1 { font-size: 28px; }
   .admin-heading > .button { min-height: 36px; padding-inline: 9px; font-size: 10px; }
   .admin-stat-grid { gap: 7px; }
+  .complaint-stat-grid { grid-template-columns: repeat(2, 1fr); gap: 7px; }
+  .complaint-stat-card { min-height: 64px; padding: 8px; }
+  .complaint-stat-card strong { font-size: 14px; }
+  .complaint-stat-card small { font-size: 8px; }
   .admin-stat-card { min-height: 72px; flex-direction: column; align-items: flex-start; gap: 4px; padding: 9px; }
   .admin-stat-icon { width: 29px; height: 29px; border-radius: 9px; }
   .admin-stat-icon svg { width: 16px; height: 16px; }
