@@ -6,6 +6,7 @@ const adminRoutes = require("./routes/admin");
 const complaintRoutes = require("./routes/complaints");
 const newsRoutes = require("./routes/news");
 const settingsRoutes = require("./routes/settings");
+const touristPlaceRoutes = require("./routes/touristPlaces");
 
 const app = express();
 const allowedOrigins = (process.env.CLIENT_ORIGIN || "http://localhost:3000")
@@ -33,6 +34,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/news", newsRoutes);
 app.use("/api/complaints", complaintRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/tourist-places", touristPlaceRoutes);
 
 app.use((_request, response) => response.status(404).json({ message: "अनुरोध गरिएको API भेटिएन।" }));
 
