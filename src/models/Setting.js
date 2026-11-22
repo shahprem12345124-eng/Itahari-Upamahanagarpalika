@@ -12,6 +12,17 @@ const settingSchema = new mongoose.Schema(
     mayorTitleEn: { type: String, trim: true, default: "" },
     mayorBioEn: { type: String, trim: true, maxlength: 2000, default: "" },
     mayorContactEn: { type: String, trim: true, maxlength: 200, default: "" },
+    currentPrograms: {
+      type: [
+        {
+          title: { type: String, required: true, trim: true, maxlength: 180 },
+          titleEn: { type: String, trim: true, maxlength: 180, default: "" },
+          detail: { type: String, trim: true, maxlength: 500, default: "" },
+          detailEn: { type: String, trim: true, maxlength: 500, default: "" },
+        },
+      ],
+      default: [],
+    },
   },
   { timestamps: true },
 );

@@ -1,7 +1,9 @@
 "use client";
 
 import Image from "next/image";
+import { useEffect, useState } from "react";
 import Icon from "../components/Icon";
+import { apiRequest, imageUrl } from "../../lib/api";
 import { useLanguage } from "../components/LanguageProvider";
 
 const places = [
@@ -58,6 +60,41 @@ const places = [
 
 export default function TouristPlacesPage() {
   const { language, t } = useLanguage();
+  const [managedPlaces, setManagedPlaces] = useState([]);
+  const [placesError, setPlacesError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    apiRequest("/tourist-places")
+      .then((response) => {
+        if (active) setManagedPlaces(response.data || []);
+      })
+      .catch((error) => {
+        if (active) setPlacesError(error.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const visiblePlaces = [
+    ...places.map((place) => ({
+      ...place,
+      key: place.name,
+      displayName: place.name,
+      displayDescription: language === "en" ? place.descriptionEn : place.descriptionNe,
+      displayImage: place.image,
+      mapQuery: place.mapQuery,
+    })),
+    ...managedPlaces.map((place) => ({
+      ...place,
+      key: place._id,
+      displayName: language === "en" ? place.nameEn || place.name : place.name,
+      displayDescription: language === "en" ? place.descriptionEn || place.description : place.description,
+      displayImage: place.image ? imageUrl(place.image) : "",
+      mapQuery: language === "en" ? place.addressEn || place.address || place.nameEn || place.name : place.address || place.name,
+    })),
+  ];
 
   return (
     <div className="container page-container">
@@ -68,28 +105,30 @@ export default function TouristPlacesPage() {
           <p>{t("इटहरीका रमणीय स्थल र घुम्नलायक ठाउँहरू")}</p>
         </div>
       </section>
+      {placesError && <p className="tourist-place-load-error" role="status">{t("थप पर्यटन स्थलहरू लोड गर्न सकिएन।")} {t(placesError)}</p>}
       <section className="tourist-place-grid" aria-label={t("पर्यटन स्थल")}>
-        {places.map((place, index) => (
-          <article className="tourist-place-card" key={place.name}>
+        {visiblePlaces.map((place, index) => (
+          <article className="tourist-place-card" key={place.key}>
             <div className="tourist-place-image-frame">
-              <Image
-                src={place.image}
-                alt={place.name}
+              {place.displayImage ? <Image
+                src={place.displayImage}
+                alt={place.displayName}
                 fill
                 sizes="(max-width: 680px) 100vw, (max-width: 900px) 50vw, 33vw"
                 className="tourist-place-image"
-              />
+                unoptimized
+              /> : <div className="tourist-place-image-empty"><Icon name="building" size={38} /></div>}
               <span className="tourist-place-number">{String(index + 1).padStart(2, "0")}</span>
             </div>
             <div className="tourist-place-copy">
-              <h2>{place.name}</h2>
-              <p>{language === "en" ? place.descriptionEn : place.descriptionNe}</p>
+              <h2>{place.displayName}</h2>
+              <p>{place.displayDescription}</p>
               <a
                 className="tourist-place-map"
                 href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.mapQuery)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label={`${t("गुगल नक्सामा हेर्नुहोस्")}: ${place.name}`}
+                aria-label={`${t("गुगल नक्सामा हेर्नुहोस्")}: ${place.displayName}`}
               >
                 <Icon name="mapPin" size={17} />
                 {t("गुगल नक्सामा हेर्नुहोस्")}

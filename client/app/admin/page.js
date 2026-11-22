@@ -62,6 +62,8 @@ export default function AdminPage() {
   const [savingMayor, setSavingMayor] = useState(false);
   const [mayorProfile, setMayorProfile] = useState(emptyMayorProfile);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [currentPrograms, setCurrentPrograms] = useState([]);
+  const [savingPrograms, setSavingPrograms] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -80,6 +82,11 @@ export default function AdminPage() {
       setMayorProfile(Object.fromEntries(
         Object.keys(emptyMayorProfile).map((field) => [field, settingsResponse.data?.[field] || ""]),
       ));
+      setCurrentPrograms(
+        Array.isArray(settingsResponse.data?.currentPrograms)
+          ? settingsResponse.data.currentPrograms
+          : [],
+      );
     } catch (error) {
       setPageError(`${t(error.message)} — ${t("Express API र MongoDB सर्भर चलिरहेको छ कि जाँच गर्नुहोस्।")}`);
     } finally {
@@ -114,6 +121,7 @@ export default function AdminPage() {
       setPassword("");
     } catch (error) {
       setPageError(error.message);
+      setPassword("");
     } finally {
       setLoading(false);
     }
@@ -123,6 +131,7 @@ export default function AdminPage() {
     event.preventDefault();
     const form = event.currentTarget;
     const body = new FormData(form);
+    if (!body.has("isNotice")) body.set("isNotice", "false");
     const id = body.get("id");
     body.delete("id");
     try {
@@ -267,6 +276,32 @@ export default function AdminPage() {
     } finally {
       setSavingProfile(false);
     }
+
+  }
+
+  function updateRunningProgram(index, field, value) {
+    setCurrentPrograms((programs) => programs.map((program, programIndex) => (
+      programIndex === index ? { ...program, [field]: value } : program
+    )));
+  }
+
+  async function saveRunningPrograms(event) {
+    event.preventDefault();
+    setSavingPrograms(true);
+    setPageError("");
+    try {
+      const response = await adminApiRequest("/settings/running-programs", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ programs: currentPrograms }),
+      });
+      setCurrentPrograms(response.data?.currentPrograms || []);
+      setPageMessage(t("चलिरहेको कार्यक्रमहरू सुरक्षित भए।"));
+    } catch (error) {
+      setPageError(t(error.message));
+    } finally {
+      setSavingPrograms(false);
+    }
   }
 
   function updateMayorProfile(field, value) {
@@ -291,8 +326,8 @@ export default function AdminPage() {
           <h1>{t("प्रशासक प्यानलमा प्रवेश")}</h1>
           <p>{t("जारी राख्न नगरपालिकाको प्रशासक पासफ्रेज प्रविष्ट गर्नुहोस्।")}</p>
           {pageError && <div className="form-alert error" role="alert"><Icon name="info" size={17} /> {pageError}</div>}
-          <form onSubmit={unlockAdmin} className="admin-gate-form">
-            <label className="field"><span>{t("पासफ्रेज")}</span><input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required autoFocus /></label>
+          <form onSubmit={unlockAdmin} className="admin-gate-form" autoComplete="off">
+            <label className="field"><span>{t("पासफ्रेज")}</span><input type="password" name="admin-passphrase" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} required autoFocus /></label>
             <button type="submit" className="button button-primary submit-button" disabled={loading}>{loading ? t("जाँच हुँदैछ...") : t("प्रवेश गर्नुहोस्")} <Icon name="arrow" size={17} /></button>
           </form>
           <div className="demo-disclaimer"><Icon name="info" size={15} /> {t("प्रशासकीय अनुरोधहरू समयसीमित टोकनद्वारा सुरक्षित छन्। पासफ्रेज गोप्य राख्नुहोस्।")}</div>
@@ -367,6 +402,24 @@ export default function AdminPage() {
 
         {activeTab === "settings" && <section className="admin-tab-content">
           <div className="admin-section-heading"><div><h2>{t("पोर्टल सेटिङ")}</h2><p>{t("मुखपृष्ठमा देखिने विवरण")}</p></div></div>
+          <form className="running-programs-form" onSubmit={saveRunningPrograms}>
+            <div className="running-programs-heading">
+              <div><h3>{t("हाल चलिरहेका कार्यक्रमहरू")}</h3><p>{t("मुखपृष्ठमा सक्रिय कार्यक्रम वा अभियान देखाउन यहाँ थप्नुहोस्।")}</p></div>
+              <button type="button" className="button button-secondary" onClick={() => setCurrentPrograms((programs) => [...programs, { title: "", titleEn: "", detail: "", detailEn: "" }])}><span>＋</span> {t("कार्यक्रम थप्नुहोस्")}</button>
+            </div>
+            {currentPrograms.length ? currentPrograms.map((program, index) => (
+              <div className="running-program-row" key={program._id || index}>
+                <div className="running-program-fields">
+                  <label className="field"><span>{t("कार्यक्रमको नाम")} <b>*</b></span><input value={program.title || ""} onChange={(event) => updateRunningProgram(index, "title", event.target.value)} required maxLength={180} /></label>
+                  <label className="field"><span>{t("English name")}</span><input value={program.titleEn || ""} onChange={(event) => updateRunningProgram(index, "titleEn", event.target.value)} maxLength={180} /></label>
+                  <label className="field"><span>{t("विवरण")}</span><input value={program.detail || ""} onChange={(event) => updateRunningProgram(index, "detail", event.target.value)} maxLength={500} /></label>
+                  <label className="field"><span>{t("English details")}</span><input value={program.detailEn || ""} onChange={(event) => updateRunningProgram(index, "detailEn", event.target.value)} maxLength={500} /></label>
+                </div>
+                <button type="button" className="icon-button action-delete" aria-label={t("कार्यक्रम हटाउनुहोस्")} onClick={() => setCurrentPrograms((programs) => programs.filter((_, programIndex) => programIndex !== index))}><Icon name="trash" size={17} /></button>
+              </div>
+            )) : <div className="admin-empty">{t("अहिलेसम्म कुनै सक्रिय कार्यक्रम थपिएको छैन।")}</div>}
+            <button type="submit" className="button button-primary running-program-save" disabled={savingPrograms}><Icon name="check" size={16} /> {savingPrograms ? t("सुरक्षित गर्दै...") : t("कार्यक्रम सुरक्षित गर्नुहोस्")}</button>
+          </form>
           <div className="mayor-settings">
             <div className="mayor-setting-photo"><Image src={mayorImage ? imageUrl(mayorImage) : "/mayor-placeholder.svg"} alt={t("हालको नगर प्रमुखको तस्बिर")} width={180} height={180} unoptimized /></div>
             <div className="mayor-setting-copy"><strong>{t("नगर प्रमुखको तस्बिर")}</strong><p>{t("स्पष्ट, अगाडिबाट खिचिएको JPG, PNG वा WEBP तस्बिर छान्नुहोस्। अधिकतम ५ MB।")}</p><label className="button button-primary upload-button"><Icon name="upload" size={16} />{savingMayor ? t("अपलोड हुँदैछ...") : t("तस्बिर परिवर्तन गर्नुहोस्")}<input type="file" accept="image/png,image/jpeg,image/webp" onChange={uploadMayorImage} disabled={savingMayor} /></label></div>
@@ -401,6 +454,10 @@ export default function AdminPage() {
             <label className="field"><span>{t("विस्तृत जानकारी")}</span><textarea name="content" defaultValue={newsEditor.content} rows={5} maxLength={8000} /></label>
             <label className="field"><span>{t("English details")}</span><textarea name="contentEn" defaultValue={newsEditor.contentEn} rows={5} maxLength={8000} /></label>
             <label className="field"><span>{t("समाचार तस्बिर")}</span><input type="file" name="image" accept="image/png,image/jpeg,image/webp" /></label>
+            <label className="notice-option">
+              <input type="checkbox" name="isNotice" value="true" defaultChecked={Boolean(newsEditor.isNotice)} />
+              <span><strong>{t("महत्वपूर्ण सूचना पपअप")}</strong><small>{t("मुखपृष्ठमा आगन्तुकले हेर्ने केन्द्रिय सूचना पपअपमा देखाउने।")}</small></span>
+            </label>
             {newsEditor.image && <p className="current-image-note"><Icon name="image" size={15} /> {t("हालको तस्बिर छ; नयाँ छानेमा प्रतिस्थापन हुनेछ।")}</p>}
             <div className="dialog-actions"><button type="button" className="button button-secondary" onClick={() => setNewsEditor(null)}>{t("रद्द गर्नुहोस्")}</button><button type="submit" className="button button-primary"><Icon name="check" size={16} /> {t("सुरक्षित गर्नुहोस्")}</button></div>
           </form>

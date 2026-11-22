@@ -25,6 +25,7 @@ export default function Home() {
   const [news, setNews] = useState(demoNews);
   const [settings, setSettings] = useState({});
   const [usingDemo, setUsingDemo] = useState(true);
+  const [noticeNews, setNoticeNews] = useState(null);
 
   useEffect(() => {
     apiRequest("/news")
@@ -32,6 +33,11 @@ export default function Home() {
         if (Array.isArray(result.data)) {
           setNews(result.data.slice(0, 3));
           setUsingDemo(false);
+          const notice = result.data.find((item) => item.isNotice);
+          if (notice) {
+            const dismissed = window.sessionStorage.getItem(`itahari-notice-dismissed-${notice._id || notice.title}`);
+            if (!dismissed) setNoticeNews(notice);
+          }
         }
       })
       .catch(() => setUsingDemo(true));
@@ -49,9 +55,37 @@ export default function Home() {
     ? settings.mayorBioEn || settings.mayorBio || t("“पारदर्शी, प्रविधिमैत्री र उत्तरदायी नगरसेवा हाम्रो लक्ष्य हो। नागरिकको साथ र सक्रिय सहभागिताले समृद्ध इटहरी निर्माण गर्न सकिन्छ।”")
     : settings.mayorBio || t("“पारदर्शी, प्रविधिमैत्री र उत्तरदायी नगरसेवा हाम्रो लक्ष्य हो। नागरिकको साथ र सक्रिय सहभागिताले समृद्ध इटहरी निर्माण गर्न सकिन्छ।”");
   const mayorContact = language === "en" ? settings.mayorContactEn || settings.mayorContact : settings.mayorContact;
+  const currentPrograms = Array.isArray(settings.currentPrograms) ? settings.currentPrograms : [];
+
+  function dismissNotice() {
+    if (noticeNews) {
+      window.sessionStorage.setItem(
+        `itahari-notice-dismissed-${noticeNews._id || noticeNews.title}`,
+        "closed",
+      );
+    }
+    setNoticeNews(null);
+  }
 
   return (
     <>
+      {noticeNews && (
+        <div className="important-notice-backdrop" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) dismissNotice();
+        }}>
+          <section className="important-notice-dialog" role="dialog" aria-modal="true" aria-labelledby="important-notice-title">
+            <button type="button" className="important-notice-close" onClick={dismissNotice} aria-label={t("सूचना बन्द गर्नुहोस्")}>
+              <Icon name="close" size={20} />
+            </button>
+            <span className="important-notice-icon"><Icon name="bell" size={28} /></span>
+            <span className="eyebrow">{t("महत्वपूर्ण सूचना")}</span>
+            <h2 id="important-notice-title">{language === "en" ? noticeNews.titleEn || noticeNews.title : noticeNews.title}</h2>
+            <p>{language === "en" ? noticeNews.summaryEn || noticeNews.summary : noticeNews.summary}</p>
+            {noticeNews.content && <div className="important-notice-content">{language === "en" ? noticeNews.contentEn || noticeNews.content : noticeNews.content}</div>}
+          </section>
+        </div>
+      )}
+
       <section className="container home-intro">
         <div className="intro-copy">
           <span className="eyebrow"><span className="eyebrow-line" /> {t("नागरिक सेवा पोर्टल")}</span>
@@ -76,6 +110,28 @@ export default function Home() {
           />
         </div>
       </section>
+
+      {currentPrograms.length > 0 && (
+        <section className="container running-program-section">
+          <div className="running-program-heading">
+            <span className="running-program-live"><span className="live-dot" /> {t("हाल चलिरहेको")}</span>
+            <h2>{t("हालका कार्यक्रमहरू")}</h2>
+          </div>
+          <div className="running-program-grid">
+            {currentPrograms.map((program, index) => (
+              <article className="running-program-card" key={program._id || `${program.title}-${index}`}>
+                <span className="running-program-card-icon"><Icon name="news" size={20} /></span>
+                <div>
+                  <strong>{language === "en" ? program.titleEn || program.title : program.title}</strong>
+                  {(language === "en" ? program.detailEn || program.detail : program.detail) && (
+                    <p>{language === "en" ? program.detailEn || program.detail : program.detail}</p>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       {usingDemo && <div className="container"><div className="inline-notice"><Icon name="info" size={17} /> {t("API सर्भर उपलब्ध नभएकाले नमुना सूचनाहरू देखाइएका छन्। वास्तविक समाचार र सेवाका लागि Express API तथा MongoDB चलाउनुहोस्।")}</div></div>}
 

@@ -14,6 +14,7 @@ const newsSchema = new mongoose.Schema(
     content: { type: String, trim: true, maxlength: 8000, default: "" },
     contentEn: { type: String, trim: true, maxlength: 8000, default: "" },
     image: { type: String, default: "" },
+    isNotice: { type: Boolean, default: false },
   },
   { timestamps: true },
 );
