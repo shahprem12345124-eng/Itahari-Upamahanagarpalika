@@ -31,6 +31,7 @@ router.post("/", requireAdmin, upload.single("image"), async (request, response)
     content: request.body.content,
     contentEn: request.body.contentEn,
     image: uploadedImagePath(request.file),
+    isNotice: request.body.isNotice === "true" || request.body.isNotice === true,
   });
   try {
     await data.save();
@@ -55,6 +56,9 @@ router.put("/:id", requireAdmin, upload.single("image"), async (request, respons
   const oldImage = news.image;
   for (const field of ["title", "titleEn", "category", "summary", "summaryEn", "content", "contentEn"]) {
     if (request.body[field] !== undefined) news[field] = request.body[field];
+  }
+  if (request.body.isNotice !== undefined) {
+    news.isNotice = request.body.isNotice === "true" || request.body.isNotice === true;
   }
   if (request.file) news.image = uploadedImagePath(request.file);
   try {

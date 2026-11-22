@@ -45,6 +45,35 @@ router.put("/mayor-profile", requireAdmin, async (request, response) => {
   response.json({ data: setting });
 });
 
+router.put("/running-programs", requireAdmin, async (request, response) => {
+  if (!Array.isArray(request.body?.programs)) {
+    return response.status(400).json({ message: "चलिरहेको कार्यक्रमको सूची मान्य छैन।" });
+  }
+
+  const programs = request.body.programs.slice(0, 12).map((program) => ({
+    title: typeof program.title === "string" ? program.title.trim() : "",
+    titleEn: typeof program.titleEn === "string" ? program.titleEn.trim() : "",
+    detail: typeof program.detail === "string" ? program.detail.trim() : "",
+    detailEn: typeof program.detailEn === "string" ? program.detailEn.trim() : "",
+  })).filter((program) => program.title);
+
+  if (programs.some((program) =>
+    program.title.length > 180 ||
+    program.titleEn.length > 180 ||
+    program.detail.length > 500 ||
+    program.detailEn.length > 500
+  )) {
+    return response.status(400).json({ message: "कार्यक्रमको विवरण धेरै लामो छ।" });
+  }
+
+  const setting = await Setting.findOneAndUpdate(
+    { key: "main" },
+    { $set: { currentPrograms: programs }, $setOnInsert: { key: "main" } },
+    { new: true, upsert: true, runValidators: true },
+  );
+  response.json({ data: setting });
+});
+
 router.put("/mayor-image", requireAdmin, upload.single("image"), async (request, response) => {
   if (!request.file) {
     return response.status(400).json({ message: "अपलोड गर्न तस्बिर छान्नुहोस्।" });
